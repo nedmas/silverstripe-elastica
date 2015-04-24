@@ -11,7 +11,8 @@ use Elastica\Query;
 class ResultList extends \ViewableData implements \SS_Limitable, \SS_List {
 
 	private $index;
-	private $query;
+    private $query;
+    private $search;
 
 	public function __construct(Index $index, Query $query) {
 		$this->index = $index;
@@ -36,24 +37,41 @@ class ResultList extends \ViewableData implements \SS_Limitable, \SS_List {
 		return $this->query;
 	}
 
+    /**
+     * @return \Elastica\ResultSet
+     */
+    public function getSearch()
+    {
+        if(is_null($this->search)) {
+            $this->search = $this->index->search($this->query);
+        }
+
+        return $this->search;
+    }
+
 	/**
 	 * @return array
 	 */
 	public function getResults() {
-		return $this->index->search($this->query)->getResults();
+		return $this->getSearch()->getResults();
 	}
+
+    /**
+     * @return int
+     */
+    public function getTotalHits()
+    {
+        return $this->getSearch()->getTotalHits();
+    }
 
 	public function getIterator() {
 		return new \ArrayIterator($this->toArray());
 	}
 
 	public function limit($limit, $offset = 0) {
-		$list = clone $this;
-
-		$list->getQuery()->setLimit($limit);
-		$list->getQuery()->setFrom($offset);
-
-		return $list;
+        $this->query->setSize($limit);
+        $this->query->setFrom($offset);
+        return $this;
 	}
 
 	/**
